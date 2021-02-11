@@ -2004,7 +2004,7 @@
 			};
 		};
 
-		/*typec_ssmux_config: typec_ssmux_config {
+		typec_ssmux_config: typec_ssmux_config {
 			mux {
 				pins = "gpio139";
 				function = "gpio";
@@ -2015,7 +2015,7 @@
 				drive-strength = <2>;
 				bias-disable;
 			};
-		};*/
+		};
 
 		ssusb_mode_sel: ssusb_mode_sel {
 			mux {
