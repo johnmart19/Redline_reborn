@@ -76,7 +76,6 @@ static void usage(void)
 {
 	fprintf(stderr, "Usage: kallsyms [--all-symbols] "
 			"[--symbol-prefix=<prefix char>] "
-			"[--page-offset=<CONFIG_PAGE_OFFSET>] "
 			"[--base-relative] < in.map > out.S\n");
 	exit(1);
 }
@@ -159,7 +158,7 @@ static int read_symbol(FILE *in, struct sym_entry *s)
 	else if (str[0] == '$')
 		return -1;
 	/* exclude debugging symbols */
-	else if (stype == 'N')
+	else if (stype == 'N' || stype == 'n')
 		return -1;
 	/* exclude s390 kasan local symbols */
 	else if (!strncmp(sym, ".LASANPC", 8))
@@ -223,6 +222,11 @@ static int symbol_valid(struct sym_entry *s)
 		"_SDA2_BASE_",		/* ppc */
 		NULL };
 
+	static char *special_prefixes[] = {
+		"__crc_",		/* modversions */
+		"__efistub_",		/* arm64 EFI stub namespace */
+		NULL };
+
 	static char *special_suffixes[] = {
 		"_veneer",		/* arm */
 		"_from_arm",		/* arm */
@@ -262,6 +266,14 @@ static int symbol_valid(struct sym_entry *s)
 	for (i = 0; special_symbols[i]; i++)
 		if (strcmp(sym_name, special_symbols[i]) == 0)
 			return 0;
+
+	for (i = 0; special_prefixes[i]; i++) {
+		int l = strlen(special_prefixes[i]);
+
+		if (l <= strlen(sym_name) &&
+		    strncmp(sym_name, special_prefixes[i], l) == 0)
+			return 0;
+	}
 
 	for (i = 0; special_suffixes[i]; i++) {
 		int l = strlen(sym_name) - strlen(special_suffixes[i]);
@@ -346,10 +358,10 @@ static void write_src(void)
 	printf("#include <asm/types.h>\n");
 	printf("#if BITS_PER_LONG == 64\n");
 	printf("#define PTR .quad\n");
-	printf("#define ALGN .balign 8\n");
+	printf("#define ALGN .align 8\n");
 	printf("#else\n");
 	printf("#define PTR .long\n");
-	printf("#define ALGN .balign 4\n");
+	printf("#define ALGN .align 4\n");
 	printf("#endif\n");
 
 	printf("\t.section .rodata, \"a\"\n");
@@ -415,7 +427,7 @@ static void write_src(void)
 	}
 
 	output_label("kallsyms_num_syms");
-	printf("\t.long\t%u\n", table_cnt);
+	printf("\tPTR\t%d\n", table_cnt);
 	printf("\n");
 
 	/* table of offset markers, that give the offset in the compressed stream
@@ -444,7 +456,7 @@ static void write_src(void)
 
 	output_label("kallsyms_markers");
 	for (i = 0; i < ((table_cnt + 255) >> 8); i++)
-		printf("\t.long\t%u\n", markers[i]);
+		printf("\tPTR\t%d\n", markers[i]);
 	printf("\n");
 
 	free(markers);
