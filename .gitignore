@@ -39,6 +39,7 @@ Module.symvers
 *.dwo
 *.su
 *.c.[012]*.*
+*.zip
 
 #
 # Top-level generic files
@@ -123,3 +124,9 @@ kernel/configs/android-*.cfg
 #Ignoring Android.bp link file
 #
 Android.bp
+
+#
+# Ignore AnyKernel3 & out 
+#
+AnyKernel3
+out
